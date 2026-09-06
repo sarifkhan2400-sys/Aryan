@@ -1,0 +1,6 @@
+{
+  "name": "ARYAN",
+  "description": "Android AI Voice Assistant with Gemini Live WebSocket, Native PCM Audio, and Phone Automation",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/overlayRoot"
+    android:layout_width="160dp"
+    android:layout_height="160dp"
+    android:background="@drawable/bg_overlay_orb">
+
+    <com.aryan.assistant.ui.main.OrbAnimationView
+        android:id="@+id/overlayOrbView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="12dp"
+        android:fontFamily="sans-serif-black"
+        android:letterSpacing="0.2"
+        android:text="ARYAN"
+        android:textColor="#FF1744"
+        android:textSize="11sp"
+        android:textStyle="bold" />
+
+    <ImageButton
+        android:id="@+id/overlayCloseBtn"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="4dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="Close Overlay"
+        android:padding="6dp"
+        android:src="@drawable/ic_close"
+        app:tint="#FF1744" />
+</FrameLayout>
