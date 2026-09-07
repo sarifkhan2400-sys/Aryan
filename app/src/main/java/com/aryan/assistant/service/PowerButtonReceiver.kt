@@ -6,12 +6,13 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 import android.util.Log
+import com.aryan.assistant.ui.main.MainActivity
 
 class PowerButtonReceiver : BroadcastReceiver() {
 
     companion object {
         private const val TAG = "PowerButtonReceiver"
-        private const val DOUBLE_PRESS_INTERVAL_MS = 650L
+        private const val DOUBLE_PRESS_INTERVAL_MS = 1000L
         private var lastPressTime = 0L
     }
 
@@ -22,21 +23,33 @@ class PowerButtonReceiver : BroadcastReceiver() {
             val diff = now - lastPressTime
             lastPressTime = now
 
-            if (diff in 1..DOUBLE_PRESS_INTERVAL_MS) {
-                Log.d(TAG, "Double power button tap detected! Diff: $diff ms")
+            if (diff in 50..DOUBLE_PRESS_INTERVAL_MS) {
+                Log.d(TAG, "Power button double tap detected! Diff: $diff ms")
+                lastPressTime = 0L // reset
                 triggerAryanAssistant(context)
             }
         }
     }
 
     private fun triggerAryanAssistant(context: Context) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(context)) {
-            val serviceIntent = Intent(context, AryanOverlayService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(serviceIntent)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && Settings.canDrawOverlays(context)) {
+                val serviceIntent = Intent(context, AryanOverlayService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(serviceIntent)
+                } else {
+                    context.startService(serviceIntent)
+                }
             } else {
-                context.startService(serviceIntent)
+                val mainIntent = Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    putExtra("EXTRA_VOICE_ASSISTANT_TRIGGERED", true)
+                }
+                context.startActivity(mainIntent)
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error triggering Aryan assistant", e)
         }
     }
 }
+

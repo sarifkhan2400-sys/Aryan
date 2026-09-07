@@ -33,9 +33,9 @@ class SettingsActivity : AppCompatActivity() {
     private lateinit var primeAdapter: PrimeContactAdapter
 
     private val modelOptions = listOf(
+        "Flash Live 2.0 (Recommended / Stable)" to "models/gemini-2.0-flash-live-001",
         "Native Audio (Human Voice)" to "models/gemini-2.5-flash-native-audio-preview-12-2025",
-        "Flash Live (Fast)" to "models/gemini-2.0-flash-live-001",
-        "Pro Audio Dialog" to "models/gemini-2.5-flash-preview-native-audio-dialog"
+        "Flash Experimental" to "models/gemini-2.0-flash-exp"
     )
 
     private val voiceOptions = listOf(
@@ -62,6 +62,7 @@ class SettingsActivity : AppCompatActivity() {
         setupPersonalityRadio()
         setupPrimeContacts()
         setupPatternLock()
+        setupDefaultAssistant()
         setupAccessibilityCheck()
         setupSaveButton()
     }
@@ -319,6 +320,38 @@ class SettingsActivity : AppCompatActivity() {
 
         Toast.makeText(this, "প্যাটার্ন আনলক টেস্ট শুরু হচ্ছে...", Toast.LENGTH_SHORT).show()
         AccessibilityHelperService.instance?.unlockWithPattern(patternList)
+    }
+
+    private fun setupDefaultAssistant() {
+        val openAssistantSettings = {
+            try {
+                // Open Android's Default Digital Assistant App selector screen
+                val intent = Intent(Settings.ACTION_VOICE_INPUT_SETTINGS).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                startActivity(intent)
+            } catch (e: Exception) {
+                try {
+                    val intent = Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    startActivity(intent)
+                } catch (e2: Exception) {
+                    val intent = Intent(Settings.ACTION_SETTINGS).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    }
+                    startActivity(intent)
+                }
+            }
+        }
+
+        binding.defaultAssistantCard.setOnClickListener {
+            openAssistantSettings()
+        }
+
+        binding.openDefaultAssistantSettingsBtn.setOnClickListener {
+            openAssistantSettings()
+        }
     }
 
     private fun setupAccessibilityCheck() {

@@ -41,6 +41,7 @@ class CallMonitorService : Service() {
     private var telephonyManager: TelephonyManager? = null
     private var phoneStateListener: PhoneStateListener? = null
     private var telephonyCallback: Any? = null // For Android 12+ (TelephonyCallback)
+    private var powerButtonReceiver: PowerButtonReceiver? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -67,6 +68,20 @@ class CallMonitorService : Service() {
             Log.e(TAG, "Failed starting foreground notification", e)
         }
         registerCallListener()
+
+        // Register PowerButtonReceiver dynamically for screen on/off events
+        try {
+            powerButtonReceiver = PowerButtonReceiver()
+            val screenFilter = android.content.IntentFilter().apply {
+                addAction(Intent.ACTION_SCREEN_ON)
+                addAction(Intent.ACTION_SCREEN_OFF)
+            }
+            registerReceiver(powerButtonReceiver, screenFilter)
+            Log.d(TAG, "Registered screen action receiver for power button shortcut")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error registering powerButtonReceiver", e)
+        }
+
         Log.d(TAG, "CallMonitorService started")
     }
 
@@ -77,6 +92,12 @@ class CallMonitorService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        try {
+            powerButtonReceiver?.let { unregisterReceiver(it) }
+            powerButtonReceiver = null
+        } catch (e: Exception) {
+            Log.e(TAG, "Error unregistering powerButtonReceiver", e)
+        }
         unregisterCallListener()
         isRunning = false
         super.onDestroy()

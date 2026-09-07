@@ -49,7 +49,7 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:theme="@style/Theme.Aryan">
 
-        <!-- ARYAN Main Activity (Launcher) -->
+        <!-- ARYAN Main Activity (Launcher + Assistant) -->
         <activity
             android:name="com.aryan.assistant.ui.main.MainActivity"
             android:launchMode="singleTop"
@@ -60,7 +60,33 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VOICE_COMMAND" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
+
+        <!-- Android Default Digital Assistant Service (Power button long press / Home swipe) -->
+        <service
+            android:name="com.aryan.assistant.service.AryanVoiceInteractionService"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:exported="true">
+            <meta-data
+                android:name="android.voice_interaction"
+                android:resource="@xml/voice_interaction_service_config" />
+            <intent-filter>
+                <action android:name="android.service.voice.VoiceInteractionService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name="com.aryan.assistant.service.AryanVoiceInteractionSessionService"
+            android:permission="android.permission.BIND_VOICE_INTERACTION"
+            android:exported="true" />
 
         <!-- Template MainActivity (Forwarding alias) -->
         <activity

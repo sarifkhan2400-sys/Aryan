@@ -29,8 +29,8 @@ class GeminiLiveClient(
 ) {
     companion object {
         private const val TAG = "GeminiLiveClient"
-        const val WS_BASE_URL = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent"
-        const val DEFAULT_MODEL = "models/gemini-2.5-flash-native-audio-preview-12-2025"
+        const val WS_BASE_URL = "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent"
+        const val DEFAULT_MODEL = "models/gemini-2.0-flash-live-001"
         const val DEFAULT_VOICE = "Charon"
         const val SESSION_RENEW_AFTER_SEC = 540L
         const val KEEPALIVE_INTERVAL_SEC = 8L
@@ -203,28 +203,26 @@ class GeminiLiveClient(
             val setupJson = JSONObject().apply {
                 put("setup", JSONObject().apply {
                     put("model", model)
-                    put("system_instruction", JSONObject().apply {
+                    put("generationConfig", JSONObject().apply {
+                        put("responseModalities", JSONArray().apply {
+                            put("AUDIO")
+                        })
+                        put("speechConfig", JSONObject().apply {
+                            put("voiceConfig", JSONObject().apply {
+                                put("prebuiltVoiceConfig", JSONObject().apply {
+                                    put("voiceName", voice)
+                                })
+                            })
+                        })
+                        put("temperature", 0.8)
+                    })
+                    put("systemInstruction", JSONObject().apply {
                         put("parts", JSONArray().apply {
                             put(JSONObject().apply {
                                 put("text", systemInstructionText)
                             })
                         })
                     })
-                    put("generation_config", JSONObject().apply {
-                        put("response_modalities", JSONArray().apply {
-                            put("AUDIO")
-                        })
-                        put("speech_config", JSONObject().apply {
-                            put("voice_config", JSONObject().apply {
-                                put("prebuilt_voice_config", JSONObject().apply {
-                                    put("voice_name", voice)
-                                })
-                            })
-                        })
-                        put("temperature", 0.9)
-                    })
-                    put("output_audio_transcription", JSONObject())
-                    put("input_audio_transcription", JSONObject())
                 })
             }
 
@@ -245,10 +243,10 @@ class GeminiLiveClient(
     private fun sendPcmChunkBase64(base64Pcm: String) {
         try {
             val json = JSONObject().apply {
-                put("realtime_input", JSONObject().apply {
-                    put("media_chunks", JSONArray().apply {
+                put("realtimeInput", JSONObject().apply {
+                    put("mediaChunks", JSONArray().apply {
                         put(JSONObject().apply {
-                            put("mime_type", "audio/pcm;rate=16000")
+                            put("mimeType", "audio/pcm;rate=16000")
                             put("data", base64Pcm)
                         })
                     })
@@ -264,7 +262,7 @@ class GeminiLiveClient(
         if (!isConnected || webSocket == null) return
         try {
             val json = JSONObject().apply {
-                put("client_content", JSONObject().apply {
+                put("clientContent", JSONObject().apply {
                     put("turns", JSONArray().apply {
                         put(JSONObject().apply {
                             put("role", "user")
@@ -275,7 +273,7 @@ class GeminiLiveClient(
                             })
                         })
                     })
-                    put("turn_complete", true)
+                    put("turnComplete", true)
                 })
             }
             webSocket?.send(json.toString())
@@ -289,9 +287,9 @@ class GeminiLiveClient(
         if (!isConnected || webSocket == null) return
         try {
             val json = JSONObject().apply {
-                put("client_content", JSONObject().apply {
+                put("clientContent", JSONObject().apply {
                     put("turns", JSONArray())
-                    put("turn_complete", true)
+                    put("turnComplete", true)
                 })
             }
             webSocket?.send(json.toString())
@@ -305,7 +303,29 @@ class GeminiLiveClient(
         try {
             val root = JSONObject(message)
 
-            if (root.has("setupComplete")) {
+            if (root.has("error")) {
+                val errorObj = root.getJSONObject("error")
+                val msg = errorObj.optString("message", "Error from Gemini Live")
+                val code = errorObj.optInt("code", 400)
+                Log.e(TAG, "Gemini Live API error: $code - $msg")
+
+                // Auto-fallback if the experimental/preview model is not found or supported on this API key
+                val currentModel = prefs.getString("gemini_model", DEFAULT_MODEL)
+                if ((code == 404 || msg.contains("not found", ignoreCase = true) || msg.contains("not supported", ignoreCase = true)) 
+                    && currentModel != "models/gemini-2.0-flash-live-001") {
+                    Log.w(TAG, "Model $currentModel failed ($msg). Falling back to models/gemini-2.0-flash-live-001")
+                    prefs.edit().putString("gemini_model", "models/gemini-2.0-flash-live-001").apply()
+                    webSocket?.let { sendSetupMessage(it) }
+                    return
+                }
+
+                scope.launch(Dispatchers.Main) {
+                    listener?.onError("Gemini: $msg")
+                }
+                return
+            }
+
+            if (root.has("setupComplete") || root.has("setup_complete") || root.has("bidiGenerateContentSetupComplete")) {
                 Log.d(TAG, "Gemini Live setup complete")
                 scope.launch(Dispatchers.Main) {
                     listener?.onSetupComplete()
@@ -313,9 +333,8 @@ class GeminiLiveClient(
                 return
             }
 
-            if (root.has("serverContent")) {
-                val serverContent = root.getJSONObject("serverContent")
-
+            val serverContent = root.optJSONObject("serverContent") ?: root.optJSONObject("server_content")
+            if (serverContent != null) {
                 if (serverContent.optBoolean("interrupted", false)) {
                     scope.launch(Dispatchers.Main) {
                         listener?.onInterrupted()
@@ -323,14 +342,14 @@ class GeminiLiveClient(
                 }
 
                 // Parse Model Turn PCM audio
-                if (serverContent.has("modelTurn")) {
-                    val modelTurn = serverContent.getJSONObject("modelTurn")
+                val modelTurn = serverContent.optJSONObject("modelTurn") ?: serverContent.optJSONObject("model_turn")
+                if (modelTurn != null) {
                     val parts = modelTurn.optJSONArray("parts")
                     if (parts != null) {
                         for (i in 0 until parts.length()) {
                             val part = parts.getJSONObject(i)
-                            if (part.has("inlineData")) {
-                                val inlineData = part.getJSONObject("inlineData")
+                            val inlineData = part.optJSONObject("inlineData") ?: part.optJSONObject("inline_data")
+                            if (inlineData != null) {
                                 val base64Data = inlineData.optString("data", "")
                                 if (base64Data.isNotEmpty()) {
                                     val pcmBytes = Base64.decode(base64Data, Base64.DEFAULT)
@@ -339,13 +358,20 @@ class GeminiLiveClient(
                                     }
                                 }
                             }
+                            val text = part.optString("text", "")
+                            if (text.isNotEmpty()) {
+                                scope.launch(Dispatchers.Main) {
+                                    listener?.onOutputTranscript(text)
+                                }
+                            }
                         }
                     }
                 }
 
                 // Output transcription (what ARYAN said)
-                if (serverContent.has("outputTranscription")) {
-                    val outText = serverContent.getJSONObject("outputTranscription").optString("text", "")
+                val outTrans = serverContent.optJSONObject("outputTranscription") ?: serverContent.optJSONObject("output_audio_transcription")
+                if (outTrans != null) {
+                    val outText = outTrans.optString("text", "")
                     if (outText.isNotEmpty()) {
                         scope.launch(Dispatchers.Main) {
                             listener?.onOutputTranscript(outText)
@@ -354,8 +380,9 @@ class GeminiLiveClient(
                 }
 
                 // Input transcription (what user said)
-                if (serverContent.has("inputTranscription")) {
-                    val inText = serverContent.getJSONObject("inputTranscription").optString("text", "")
+                val inTrans = serverContent.optJSONObject("inputTranscription") ?: serverContent.optJSONObject("input_audio_transcription")
+                if (inTrans != null) {
+                    val inText = inTrans.optString("text", "")
                     if (inText.isNotEmpty()) {
                         scope.launch(Dispatchers.Main) {
                             listener?.onInputTranscript(inText)
@@ -363,7 +390,7 @@ class GeminiLiveClient(
                     }
                 }
 
-                if (serverContent.optBoolean("turnComplete", false)) {
+                if (serverContent.optBoolean("turnComplete", false) || serverContent.optBoolean("turn_complete", false)) {
                     scope.launch(Dispatchers.Main) {
                         listener?.onTurnComplete()
                     }

@@ -62,18 +62,42 @@ class AudioEngine(
             )
             val bufferSize = maxOf(minBufSize, CHUNK_SIZE * 4)
 
-            audioRecord = AudioRecord(
-                MediaRecorder.AudioSource.VOICE_RECOGNITION,
-                MIC_SAMPLE_RATE,
-                AudioFormat.CHANNEL_IN_MONO,
-                AudioFormat.ENCODING_PCM_16BIT,
-                bufferSize
+            // Try standard MIC source first for maximum device compatibility
+            var recordInstance: AudioRecord? = null
+            val sources = intArrayOf(
+                MediaRecorder.AudioSource.MIC,
+                MediaRecorder.AudioSource.DEFAULT,
+                MediaRecorder.AudioSource.VOICE_COMMUNICATION,
+                MediaRecorder.AudioSource.VOICE_RECOGNITION
             )
 
-            if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
-                Log.e(TAG, "AudioRecord initialization failed")
+            for (src in sources) {
+                try {
+                    val candidate = AudioRecord(
+                        src,
+                        MIC_SAMPLE_RATE,
+                        AudioFormat.CHANNEL_IN_MONO,
+                        AudioFormat.ENCODING_PCM_16BIT,
+                        bufferSize
+                    )
+                    if (candidate.state == AudioRecord.STATE_INITIALIZED) {
+                        recordInstance = candidate
+                        Log.d(TAG, "Initialized AudioRecord with source=$src")
+                        break
+                    } else {
+                        candidate.release()
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Could not initialize AudioRecord with source=$src: ${e.message}")
+                }
+            }
+
+            if (recordInstance == null || recordInstance.state != AudioRecord.STATE_INITIALIZED) {
+                Log.e(TAG, "AudioRecord initialization failed on all sources")
                 return
             }
+
+            audioRecord = recordInstance
 
             audioRecord?.startRecording()
             isRecording.set(true)

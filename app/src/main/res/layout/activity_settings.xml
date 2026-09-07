@@ -430,7 +430,64 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- 8. Accessibility Service Status Card -->
+        <!-- 8. Default Assistant & Power Button Setup Card -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/defaultAssistantCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?attr/selectableItemBackground"
+            app:cardBackgroundColor="#111111"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="3dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="⚡ Power Button &amp; Assistant Setup"
+                        android:textColor="#EEEEEE"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="পাওয়ার বাটন চেপে বা ডাবল চাপে আরিয়ান চালু করতে সেট করুন"
+                        android:textColor="#888888"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/openDefaultAssistantSettingsBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="36dp"
+                    android:background="@drawable/bg_prime_badge"
+                    android:fontFamily="sans-serif-bold"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:text="SETUP"
+                    android:textColor="#FF1744"
+                    android:textSize="11sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- 9. Accessibility Service Status Card -->
         <androidx.cardview.widget.CardView
             android:id="@+id/accessibilityCard"
             android:layout_width="match_parent"

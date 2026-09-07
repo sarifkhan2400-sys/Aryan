@@ -12,6 +12,9 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
 import android.util.Log
 import android.view.View
 import android.widget.Toast
@@ -105,12 +108,24 @@ class MainActivity : AppCompatActivity() {
         checkAndRequestPermissions()
         startCallMonitorService()
         checkIncomingCallIntent(intent)
+        checkVoiceAssistantTrigger(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         checkIncomingCallIntent(intent)
+        checkVoiceAssistantTrigger(intent)
+    }
+
+    private fun checkVoiceAssistantTrigger(intent: Intent?) {
+        if (intent?.getBooleanExtra("EXTRA_VOICE_ASSISTANT_TRIGGERED", false) == true ||
+            intent?.action == Intent.ACTION_ASSIST ||
+            intent?.action == Intent.ACTION_VOICE_COMMAND
+        ) {
+            binding.statusText.text = "পাওয়ার বাটন দিয়ে চালু হয়েছে! শুনছি... 🎙️"
+            startSpeechRecognizer()
+        }
     }
 
     private fun checkIncomingCallIntent(intent: Intent?) {
@@ -162,14 +177,125 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private var speechRecognizer: SpeechRecognizer? = null
+
     private fun setupControls() {
         binding.micButton.setOnClickListener {
-            toggleMute()
+            if (isMuted) {
+                toggleMute()
+            }
+            startSpeechRecognizer()
         }
 
         binding.micButton.setOnLongClickListener {
             interruptAssistant()
             true
+        }
+
+        // Quick Command Chips
+        binding.chipUnlock.setOnClickListener {
+            processUserCommand("ফোনের লক খোলো")
+        }
+
+        binding.chipCall.setOnClickListener {
+            processUserCommand("আম্মুকে কল করো")
+        }
+
+        binding.chipTime.setOnClickListener {
+            processUserCommand("এখন সময় কত")
+        }
+
+        binding.chipBattery.setOnClickListener {
+            processUserCommand("ব্যাটারি চার্জ কত আছে")
+        }
+
+        // Text input and Send button
+        binding.sendTextBtn.setOnClickListener {
+            val text = binding.commandTextInput.text?.toString()?.trim() ?: ""
+            if (text.isNotEmpty()) {
+                processUserCommand(text)
+            }
+        }
+
+        binding.commandTextInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEND) {
+                val text = binding.commandTextInput.text?.toString()?.trim() ?: ""
+                if (text.isNotEmpty()) {
+                    processUserCommand(text)
+                }
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    private fun processUserCommand(text: String) {
+        if (text.isBlank()) return
+        chatAdapter.addMessage(ChatMessage(text, isUser = true))
+        binding.chatRecycler.scrollToPosition(chatAdapter.itemCount - 1)
+        binding.commandTextInput.text?.clear()
+        handleUserSpeech(text)
+    }
+
+    private fun startSpeechRecognizer() {
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            binding.statusText.text = "শুনছি... কথা বলুন / Listening 🎙️"
+            return
+        }
+
+        try {
+            speechRecognizer?.destroy()
+            speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
+                setRecognitionListener(object : RecognitionListener {
+                    override fun onReadyForSpeech(params: Bundle?) {
+                        binding.statusText.text = "শুনছি... বলুন / Listening... 🎙️"
+                        binding.orbView.setState(OrbState.Listening)
+                    }
+
+                    override fun onBeginningOfSpeech() {
+                        binding.statusText.text = "শুনছি... / Listening 🎙️"
+                    }
+
+                    override fun onRmsChanged(rmsdB: Float) {
+                        val norm = (rmsdB / 10f).coerceIn(0f, 1f)
+                        binding.waveformView.setAmplitude(norm)
+                        binding.orbView.setAmplitude(norm)
+                    }
+
+                    override fun onBufferReceived(buffer: ByteArray?) {}
+
+                    override fun onEndOfSpeech() {
+                        binding.statusText.text = "প্রসেস করছি... / Processing ⚡"
+                    }
+
+                    override fun onError(error: Int) {
+                        Log.d(TAG, "SpeechRecognizer error: $error")
+                        binding.statusText.text = "শুনছি... / Listening 🎙️"
+                        binding.orbView.setState(OrbState.Active)
+                    }
+
+                    override fun onResults(results: Bundle?) {
+                        val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                        val spokenText = matches?.firstOrNull() ?: return
+                        processUserCommand(spokenText)
+                    }
+
+                    override fun onPartialResults(partialResults: Bundle?) {}
+
+                    override fun onEvent(eventType: Int, params: Bundle?) {}
+                })
+            }
+
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "bn-BD")
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, "bn-BD")
+                putExtra(RecognizerIntent.EXTRA_PROMPT, "ARYAN শুনছে...")
+            }
+            speechRecognizer?.startListening(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "SpeechRecognizer exception", e)
         }
     }
 
@@ -204,7 +330,9 @@ class MainActivity : AppCompatActivity() {
             listener = object : GeminiLiveClient.Listener {
                 override fun onConnected() {
                     binding.orbView.setState(OrbState.Active)
-                    binding.statusText.text = "সংযুক্ত / Connected 🟢"
+                    binding.statusText.text = "সংযুক্ত / Connected 🟢 (শুনছি... 🎙️)"
+                    binding.micButton.setImageResource(R.drawable.ic_mic_on)
+                    binding.micButton.alpha = 1.0f
                 }
 
                 override fun onSetupComplete() {
@@ -248,6 +376,7 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onTurnComplete() {
                     binding.orbView.setState(OrbState.Active)
+                    binding.statusText.text = "শুনছি... / Listening 🎙️"
                 }
 
                 override fun onInterrupted() {
@@ -288,6 +417,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        // Start AudioEngine immediately on initialize!
+        audioEngine?.startRecording()
+        audioEngine?.startPlayback()
+
         geminiClient?.connect()
     }
 
@@ -308,6 +441,9 @@ class MainActivity : AppCompatActivity() {
         val command = CommandParser.parse(text)
         if (command != null) {
             viewModel.executeCommand(command)
+        } else {
+            // Forward general speech or questions to Gemini AI
+            geminiClient?.sendText(text)
         }
     }
 
@@ -369,6 +505,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         statsJob?.cancel()
+        speechRecognizer?.destroy()
+        speechRecognizer = null
         try {
             unregisterReceiver(callReceiver)
         } catch (e: Exception) {
