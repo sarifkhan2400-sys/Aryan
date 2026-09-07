@@ -5,6 +5,9 @@ import android.accessibilityservice.GestureDescription
 import android.content.Context
 import android.graphics.Path
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.PowerManager
 import android.provider.Settings
 import android.text.TextUtils
 import android.util.Log
@@ -156,5 +159,96 @@ class AccessibilityHelperService : AccessibilityService() {
         }
         recurse(root)
         return result
+    }
+
+    fun wakeAndUnlock(pattern: List<Int>): Boolean {
+        wakeScreen()
+        return unlockWithPattern(pattern)
+    }
+
+    fun wakeScreen() {
+        try {
+            val pm = getSystemService(Context.POWER_SERVICE) as? PowerManager
+            @Suppress("DEPRECATION")
+            val wakeLock = pm?.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
+                "aryan:wake_screen"
+            )
+            wakeLock?.acquire(3000L)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error waking screen", e)
+        }
+    }
+
+    fun unlockWithPattern(pattern: List<Int>): Boolean {
+        if (pattern.size < 2) return false
+        wakeScreen()
+
+        val displayMetrics = resources.displayMetrics
+        val screenWidth = displayMetrics.widthPixels.toFloat()
+        val screenHeight = displayMetrics.heightPixels.toFloat()
+
+        // 1. Swipe up from bottom to reveal pattern lock screen if keyguard is active
+        val swipePath = Path().apply {
+            moveTo(screenWidth / 2f, screenHeight * 0.85f)
+            lineTo(screenWidth / 2f, screenHeight * 0.30f)
+        }
+        val swipeGesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(swipePath, 0, 220L))
+            .build()
+
+        return dispatchGesture(swipeGesture, object : GestureResultCallback() {
+            override fun onCompleted(gestureDescription: GestureDescription?) {
+                // Wait for the pattern grid UI to settle after swipe up
+                Handler(Looper.getMainLooper()).postDelayed({
+                    dispatchPatternGesture(pattern, screenWidth, screenHeight)
+                }, 350L)
+            }
+
+            override fun onCancelled(gestureDescription: GestureDescription?) {
+                // Fallback: attempt direct drawing
+                dispatchPatternGesture(pattern, screenWidth, screenHeight)
+            }
+        }, null)
+    }
+
+    private fun dispatchPatternGesture(pattern: List<Int>, screenWidth: Float, screenHeight: Float): Boolean {
+        if (pattern.size < 2) return false
+
+        // Standard Android pattern grid coordinates
+        val gridWidth = screenWidth * 0.72f
+        val startX = (screenWidth - gridWidth) / 2f
+        val cellSpacing = gridWidth / 2f
+
+        // Center vertically around 58% of screen
+        val patternCenterY = screenHeight * 0.58f
+        val startY = patternCenterY - cellSpacing
+
+        fun getX(node: Int): Float = startX + (node % 3) * cellSpacing
+        fun getY(node: Int): Float = startY + (node / 3) * cellSpacing
+
+        val path = Path().apply {
+            val first = pattern[0]
+            moveTo(getX(first), getY(first))
+            for (i in 1 until pattern.size) {
+                val node = pattern[i]
+                lineTo(getX(node), getY(node))
+            }
+        }
+
+        val strokeDuration = (pattern.size * 120L).coerceIn(300L, 800L)
+        val gesture = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, strokeDuration))
+            .build()
+
+        return dispatchGesture(gesture, object : GestureResultCallback() {
+            override fun onCompleted(gestureDescription: GestureDescription?) {
+                Log.d(TAG, "Pattern unlock gesture finished successfully")
+            }
+
+            override fun onCancelled(gestureDescription: GestureDescription?) {
+                Log.w(TAG, "Pattern unlock gesture cancelled")
+            }
+        }, null)
     }
 }

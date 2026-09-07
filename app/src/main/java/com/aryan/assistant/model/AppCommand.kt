@@ -21,5 +21,6 @@ data class AppCommand(
         const val WIFI_OFF = "WIFI_OFF"
         const val BLUETOOTH_ON = "BLUETOOTH_ON"
         const val BLUETOOTH_OFF = "BLUETOOTH_OFF"
+        const val UNLOCK_PHONE = "UNLOCK_PHONE"
     }
 }

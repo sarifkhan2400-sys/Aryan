@@ -308,7 +308,129 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- 7. Accessibility Service Status Card -->
+        <!-- 7. Mobile Pattern Lock Card -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            app:cardBackgroundColor="#111111"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="3dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:fontFamily="sans-serif-medium"
+                            android:text="🔐 Mobile Pattern Lock"
+                            android:textColor="#FF1744"
+                            android:textSize="14sp" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="Say 'ফোনের লক খোলো' or 'Open phone lock' to unlock"
+                            android:textColor="#888888"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+
+                    <com.google.android.material.switchmaterial.SwitchMaterial
+                        android:id="@+id/patternLockSwitch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        app:thumbTint="#FF1744"
+                        app:trackTint="#66FF1744" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_input_field"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="12dp">
+
+                    <TextView
+                        android:id="@+id/patternStatusSummaryText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="sans-serif"
+                        android:text="প্যাটার্ন সেট করা নেই (Not configured)"
+                        android:textColor="#EEEEEE"
+                        android:textSize="12sp" />
+
+                    <Button
+                        android:id="@+id/configurePatternBtn"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:background="@drawable/bg_prime_badge"
+                        android:fontFamily="sans-serif-bold"
+                        android:paddingStart="12dp"
+                        android:paddingEnd="12dp"
+                        android:text="SET PATTERN"
+                        android:textColor="#FF1744"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/patternActionsLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:visibility="gone">
+
+                    <Button
+                        android:id="@+id/testPatternUnlockBtn"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:layout_marginEnd="6dp"
+                        android:background="@drawable/bg_bento_pill"
+                        android:fontFamily="sans-serif-bold"
+                        android:text="⚡ TEST UNLOCK"
+                        android:textColor="#00E676"
+                        android:textSize="11sp" />
+
+                    <Button
+                        android:id="@+id/clearSavedPatternBtn"
+                        android:layout_width="0dp"
+                        android:layout_height="36dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        android:background="@drawable/bg_bento_pill"
+                        android:fontFamily="sans-serif-bold"
+                        android:text="🗑 CLEAR"
+                        android:textColor="#888888"
+                        android:textSize="11sp" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- 8. Accessibility Service Status Card -->
         <androidx.cardview.widget.CardView
             android:id="@+id/accessibilityCard"
             android:layout_width="match_parent"

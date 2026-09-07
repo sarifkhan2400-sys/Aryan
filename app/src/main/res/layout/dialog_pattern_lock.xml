@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#151515"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <!-- Header -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-black"
+        android:letterSpacing="0.05"
+        android:text="🔐 MOBILE PATTERN LOCK"
+        android:textColor="#FF1744"
+        android:textSize="18sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="আপনার ফোনের আনলক প্যাটার্নটি নিচে আঙুল দিয়ে আঁকুন। মুখে 'ফোনের লক খোলো' বা 'Open phone lock' বললে এটি দিয়ে স্বয়ংক্রিয়ভাবে লক খোলা হবে।"
+        android:textColor="#AAAAAA"
+        android:textSize="12sp" />
+
+    <!-- Pattern View Container -->
+    <androidx.cardview.widget.CardView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="16dp"
+        app:cardBackgroundColor="#0A0A0A"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="2dp">
+
+        <com.aryan.assistant.ui.settings.PatternLockView
+            android:id="@+id/dialogPatternLockView"
+            android:layout_width="260dp"
+            android:layout_height="260dp"
+            android:layout_gravity="center"
+            android:padding="8dp" />
+    </androidx.cardview.widget.CardView>
+
+    <!-- Pattern Status / Sequence Text -->
+    <TextView
+        android:id="@+id/dialogPatternStatusText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:gravity="center"
+        android:fontFamily="sans-serif-medium"
+        android:text="আঙুল দিয়ে ডটগুলো যুক্ত করুন (Connect dots)"
+        android:textColor="#EEEEEE"
+        android:textSize="13sp" />
+
+    <!-- Action Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="18dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/dialogResetPatternBtn"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_bento_pill"
+            android:fontFamily="sans-serif-bold"
+            android:text="RESET"
+            android:textColor="#EEEEEE"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/dialogCancelPatternBtn"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="4dp"
+            android:background="@drawable/bg_bento_pill"
+            android:fontFamily="sans-serif-bold"
+            android:text="CANCEL"
+            android:textColor="#AAAAAA"
+            android:textSize="12sp" />
+
+        <Button
+            android:id="@+id/dialogSavePatternBtn"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1.3"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/bg_save_button"
+            android:fontFamily="sans-serif-bold"
+            android:text="SAVE PATTERN"
+            android:textColor="#FFFFFF"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+</LinearLayout>

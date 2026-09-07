@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
 import android.widget.TextView
@@ -60,6 +61,7 @@ class SettingsActivity : AppCompatActivity() {
         setupSpinners()
         setupPersonalityRadio()
         setupPrimeContacts()
+        setupPatternLock()
         setupAccessibilityCheck()
         setupSaveButton()
     }
@@ -174,6 +176,149 @@ class SettingsActivity : AppCompatActivity() {
             array.put(obj)
         }
         prefs.edit().putString("prime_contacts_json", array.toString()).apply()
+    }
+
+    private fun setupPatternLock() {
+        val enabled = prefs.getBoolean("pattern_lock_enabled", true)
+        binding.patternLockSwitch.isChecked = enabled
+
+        binding.patternLockSwitch.setOnCheckedChangeListener { _, isChecked ->
+            prefs.edit().putBoolean("pattern_lock_enabled", isChecked).apply()
+            updatePatternStatusUI()
+        }
+
+        binding.configurePatternBtn.setOnClickListener {
+            showPatternLockDialog()
+        }
+
+        binding.testPatternUnlockBtn.setOnClickListener {
+            testPatternUnlock()
+        }
+
+        binding.clearSavedPatternBtn.setOnClickListener {
+            prefs.edit().remove("pattern_lock_sequence").apply()
+            updatePatternStatusUI()
+            Toast.makeText(this, "প্যাটার্ন লক মুছে ফেলা হয়েছে (Pattern cleared)", Toast.LENGTH_SHORT).show()
+        }
+
+        updatePatternStatusUI()
+    }
+
+    private fun updatePatternStatusUI() {
+        val patternStr = prefs.getString("pattern_lock_sequence", null)
+        val isEnabled = prefs.getBoolean("pattern_lock_enabled", true)
+
+        if (!patternStr.isNullOrEmpty()) {
+            val count = patternStr.split(",").filter { it.isNotEmpty() }.size
+            binding.patternStatusSummaryText.text = "✅ প্যাটার্ন সক্রিয়: $count টি ডট সংরক্ষিত (Saved)"
+            binding.patternStatusSummaryText.setTextColor(getColor(R.color.success))
+            binding.patternActionsLayout.visibility = if (isEnabled) View.VISIBLE else View.GONE
+            binding.configurePatternBtn.text = "CHANGE"
+        } else {
+            binding.patternStatusSummaryText.text = "❌ প্যাটার্ন সেট করা নেই (Not configured)"
+            binding.patternStatusSummaryText.setTextColor(getColor(R.color.text_secondary))
+            binding.patternActionsLayout.visibility = View.GONE
+            binding.configurePatternBtn.text = "SET PATTERN"
+        }
+    }
+
+    private fun showPatternLockDialog() {
+        val dialogView = layoutInflater.inflate(R.layout.dialog_pattern_lock, null)
+        val patternView = dialogView.findViewById<PatternLockView>(R.id.dialogPatternLockView)
+        val statusText = dialogView.findViewById<TextView>(R.id.dialogPatternStatusText)
+        val resetBtn = dialogView.findViewById<Button>(R.id.dialogResetPatternBtn)
+        val cancelBtn = dialogView.findViewById<Button>(R.id.dialogCancelPatternBtn)
+        val saveBtn = dialogView.findViewById<Button>(R.id.dialogSavePatternBtn)
+
+        var detectedPattern: List<Int>? = null
+
+        // Load existing pattern if available
+        val existingPattern = prefs.getString("pattern_lock_sequence", null)
+        if (!existingPattern.isNullOrEmpty()) {
+            val list = existingPattern.split(",").mapNotNull { it.trim().toIntOrNull() }
+            if (list.size >= 3) {
+                patternView.setPattern(list)
+                detectedPattern = list
+                statusText.text = "বর্তমান প্যাটার্ন: ${list.size}টি ডট। নতুন করে আঁকতে পারেন।"
+            }
+        }
+
+        patternView.listener = object : PatternLockView.OnPatternListener {
+            override fun onPatternDetected(pattern: List<Int>) {
+                if (pattern.size >= 4) {
+                    detectedPattern = pattern
+                    statusText.text = "✅ ${pattern.size}টি ডট যুক্ত হয়েছে। সেভ করতে পারেন।"
+                    statusText.setTextColor(getColor(R.color.success))
+                } else {
+                    detectedPattern = null
+                    patternView.setError(true)
+                    statusText.text = "⚠️ কমপক্ষে ৪টি ডট যুক্ত করুন (Connect at least 4 dots)"
+                    statusText.setTextColor(getColor(R.color.error_red))
+                }
+            }
+
+            override fun onPatternCleared() {
+                detectedPattern = null
+                statusText.text = "আঙুল দিয়ে ডটগুলো যুক্ত করুন"
+                statusText.setTextColor(getColor(R.color.text_secondary))
+            }
+        }
+
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .create()
+
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+
+        resetBtn.setOnClickListener {
+            patternView.clearPattern()
+            detectedPattern = null
+        }
+
+        cancelBtn.setOnClickListener {
+            dialog.dismiss()
+        }
+
+        saveBtn.setOnClickListener {
+            val pattern = detectedPattern
+            if (pattern != null && pattern.size >= 4) {
+                val patternString = pattern.joinToString(",")
+                prefs.edit()
+                    .putString("pattern_lock_sequence", patternString)
+                    .putBoolean("pattern_lock_enabled", true)
+                    .apply()
+                updatePatternStatusUI()
+                Toast.makeText(this, "প্যাটার্ন লক সংরক্ষিত হয়েছে! (Pattern saved)", Toast.LENGTH_SHORT).show()
+                dialog.dismiss()
+            } else {
+                patternView.setError(true)
+                statusText.text = "⚠️ অনুগ্রহ করে সঠিক প্যাটার্ন আঁকুন (কমপক্ষে ৪টি ডট)"
+                statusText.setTextColor(getColor(R.color.error_red))
+            }
+        }
+
+        dialog.show()
+    }
+
+    private fun testPatternUnlock() {
+        val patternStr = prefs.getString("pattern_lock_sequence", null)
+        if (patternStr.isNullOrEmpty()) {
+            Toast.makeText(this, "প্যাটার্ন সেট করা নেই", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val patternList = patternStr.split(",").mapNotNull { it.trim().toIntOrNull() }
+
+        if (!AccessibilityHelperService.isEnabled(this)) {
+            Toast.makeText(this, "অ্যাক্সেসিবিলিটি সার্ভিস চালু করা প্রয়োজন", Toast.LENGTH_LONG).show()
+            val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            startActivity(intent)
+            return
+        }
+
+        Toast.makeText(this, "প্যাটার্ন আনলক টেস্ট শুরু হচ্ছে...", Toast.LENGTH_SHORT).show()
+        AccessibilityHelperService.instance?.unlockWithPattern(patternList)
     }
 
     private fun setupAccessibilityCheck() {

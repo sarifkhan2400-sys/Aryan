@@ -97,7 +97,23 @@ object CommandParser {
             return AppCommand(AppCommand.SMS, mapOf("name" to target))
         }
 
-        // 10. Open App
+        // 10. Unlock Phone / Open Phone Lock
+        if (text.contains("ফোনের লক খোলো") || text.contains("ফোনের লক খোল") ||
+            text.contains("ফোন লক খোলো") || text.contains("ফোন লক খোল") ||
+            text.contains("মোবাইলের লক খোলো") || text.contains("মোবাইল লক খোলো") ||
+            text.contains("প্যাটার্ন লক খোলো") || text.contains("প্যাটার্ন খোলো") ||
+            text.contains("লক খোলো") || text.contains("লক খোল") ||
+            text.contains("ফোন আনলক করো") || text.contains("মোবাইল আনলক করো") ||
+            text.contains("open phone lock") || text.contains("open mobile lock") ||
+            text.contains("open pattern lock") || text.contains("open the lock") ||
+            text.contains("open lock") || text.contains("unlock phone") ||
+            text.contains("unlock my phone") || text.contains("unlock mobile") ||
+            text.contains("unlock device")
+        ) {
+            return AppCommand(AppCommand.UNLOCK_PHONE)
+        }
+
+        // 11. Open App
         if (text.contains("খোলো") || text.contains("ওপেন") || text.startsWith("open ") || text.contains("launch ")) {
             val app = extractAppName(text)
             if (app.isNotEmpty()) {

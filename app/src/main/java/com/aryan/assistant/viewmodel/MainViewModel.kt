@@ -180,6 +180,28 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         openBluetoothSettings()
                         postResult("Opening Bluetooth settings.")
                     }
+                    AppCommand.UNLOCK_PHONE -> {
+                        val enabled = prefs.getBoolean("pattern_lock_enabled", true)
+                        val patternStr = prefs.getString("pattern_lock_sequence", null)
+                        if (!enabled || patternStr.isNullOrEmpty()) {
+                            postResult("প্যাটার্ন লক সেট করা নেই। দয়া করে সেটিংসে গিয়ে আপনার ফোনের প্যাটার্ন লক সেট করুন।")
+                        } else if (!AccessibilityHelperService.isEnabled(context)) {
+                            postResult("অ্যাক্সেসিবিলিটি সার্ভিস বন্ধ আছে। লক খোলার জন্য সেটিংস থেকে অ্যাক্সেসিবিলিটি সার্ভিস চালু করুন।")
+                        } else {
+                            val patternList = patternStr.split(",").mapNotNull { it.trim().toIntOrNull() }
+                            if (patternList.size < 3) {
+                                postResult("সংরক্ষিত প্যাটার্নটি সঠিক নয়। দয়া করে পুনরায় সেট করুন।")
+                            } else {
+                                val helper = AccessibilityHelperService.instance
+                                if (helper != null) {
+                                    val success = helper.unlockWithPattern(patternList)
+                                    postResult(if (success) "ফোনের লক খোলা হচ্ছে..." else "লক খোলার চেষ্টা করা হচ্ছে...")
+                                } else {
+                                    postResult("অ্যাক্সেসিবিলিটি সার্ভিস সক্রিয় নেই। অনুগ্রহ করে সেটিংস থেকে চালু করুন।")
+                                }
+                            }
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error executing command: ${command.type}", e)
